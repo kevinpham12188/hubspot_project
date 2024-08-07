@@ -12,80 +12,7 @@ import java.util.stream.Collectors;
 
 public class Transform {
 
-//    public Country transform(List<Partner> partners) {
-//        if(partners.isEmpty()) {
-//            return null;
-//        }
-//
-////        Calculate total partners for each country
-//        Map<String, List<Partner>> countryMap = partners.stream().collect(Collectors.groupingBy(Partner::getCountry));
-//
-//        for(Map.Entry<String, List<Partner>> entry : countryMap.entrySet()) {
-//            String countryName = entry.getKey();
-//            List<Partner> countryPartners = entry.getValue();
-//
-////            Find the best start date with the maximum number of attendees
-//            Map<String, Long> dateCountMap = new HashMap<>();
-//            for(Partner partner : countryPartners) {
-//                List<String> dates = partner.getAvailableDates();
-//
-//                for(int i = 0; i < dates.size() - 1; i++) {
-//                    String startDate = dates.get(i);
-//                    String endDate = getNextDay(startDate);
-//                    if(dates.contains(endDate)) {
-//                        String dateRange = startDate + " / " + endDate;
-//                        dateCountMap.put(dateRange, dateCountMap.getOrDefault(dateRange, 0L) + 1);
-//                    }
-//                }
-//            }
-//
-////            Find the date range with the maximum count
-//            String bestDateRange = dateCountMap.entrySet().stream()
-//                    .max(Map.Entry.comparingByValue())
-//                    .map(Map.Entry::getKey)
-//                    .orElse("");
-//
-////            Extracting start date from best date range
-//            String startDate = bestDateRange != null ? bestDateRange.split("/")[0] : null;
-//
-////            Collect the attendees for the chosen date range
-////            List<String> attendees = countryPartners.stream()
-////                    .filter(partner -> partner.getAvailableDates().contains(startDate) &&
-////                            partner.getAvailableDates().contains(getNextDay(startDate)))
-////                    .map(Partner::getEmail)
-////                    .collect(Collectors.toList());
-//
-//            Map<String, List<String>> dateToAttendees = new HashMap<>();
-//            for(Partner partner : countryPartners) {
-//                List<String> dates = partner.getAvailableDates();
-//                for(int i = 0; i < dates.size() - 1; i++) {
-//                    String date = dates.get(i);
-//                    if(date == startDate) {
-//
-//                    }
-//                }
-//            }
-//
-//            List<String> attendees = new ArrayList<>();
-//            for (Partner partner : countryPartners) {
-//                List<String> availableDates = partner.getAvailableDates();
-//                if (availableDates.contains(startDate) && availableDates.contains(getNextDay(startDate))) {
-//                    attendees.add(partner.getEmail());
-//                }
-//            }
-//
-////            System.out.println("Attendees for country " + countryName + ": " + attendees);
-//
-////            Create the country object
-//            Country country = new Country(attendees.size(), attendees, countryName, startDate);
-//        }
-//        return country;
-//    }
-
-    private String getNextDay(String date) {
-        java.time.LocalDate localDate = java.time.LocalDate.parse(date);
-        return localDate.plusDays(1).toString();
-    }
+    /** Convert list of Partner objects into a list of Country objects **/
 
     public List<Country> transformPartnerToCountry(List<Partner> partners) {
         Map<String, List<Partner>> countries = new HashMap<>();
@@ -103,9 +30,10 @@ public class Transform {
         return countriesList;
     }
 
+    /** Process the partners for a specific country and determin the best start date with the most attendees **/
     private Country transformOneCountry(String countryName, List<Partner> countryPartners) {
 
-//            Find the best start date with the maximum number of attendees
+//            Find the start date (with next day) and number of attendees for each start date
         Map<String, Long> dateCountMap = new HashMap<>();
         for(Partner partner : countryPartners) {
             List<String> dates = partner.getAvailableDates();
@@ -114,35 +42,44 @@ public class Transform {
                 String startDate = dates.get(i);
                 String endDate = getNextDay(startDate);
                 if(dates.contains(endDate)) {
-                    String dateRange = startDate + "/ " + endDate;
-                    dateCountMap.put(dateRange, dateCountMap.getOrDefault(dateRange, 0L) + 1);
+                    dateCountMap.put(startDate, dateCountMap.getOrDefault(startDate, 0L) + 1);
                 }
             }
         }
 
-//            Find the date range with the maximum count
-        String bestDateRange = dateCountMap.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
+//              Find the best start date by sorting by maximum number of attendees and by date
+        String bestStartDate = dateCountMap.entrySet().stream()
+                .sorted((e1, e2) -> {
+                    int countComparison = e2.getValue().compareTo(e1.getValue()); // Descending order of count
+                    if (countComparison == 0) {
+                        return e1.getKey().compareTo(e2.getKey()); // Ascending order of date
+                    }
+                    return countComparison;
+                })
                 .map(Map.Entry::getKey)
-                .orElse("");
+                .findFirst()
+                .orElse(null);
+//        System.out.println(bestStartDate);
 
-//            Extracting start date from best date range
-        String startDate = bestDateRange != null ? bestDateRange.split("/")[0] : null;
-
-        Map<String, List<String>> dateToAttendees = new HashMap<>();
+//        Find the attendees that have best start date and meet 2 consecutive date requirement
         List<String> attendees = new ArrayList<>();
         for(Partner partner : countryPartners) {
             List<String> dates = partner.getAvailableDates();
             for(int i = 0; i < dates.size() - 1; i++) {
                 String date = dates.get(i);
-                if(date.equals(startDate) && dates.contains(startDate + 1)) {
+                if(date.equals(bestStartDate) && dates.contains(getNextDay(bestStartDate))) {
                     attendees.add(partner.getEmail());
                 }
             }
         }
 
 //            Create the country object
-        Country country = new Country(attendees.size(), attendees, countryName, startDate);
+        Country country = new Country(attendees.size(), attendees, countryName, bestStartDate);
         return country;
+    }
+
+    private String getNextDay(String date) {
+        java.time.LocalDate localDate = java.time.LocalDate.parse(date);
+        return localDate.plusDays(1).toString();
     }
 }

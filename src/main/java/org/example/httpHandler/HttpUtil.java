@@ -78,6 +78,11 @@ public class HttpUtil {
                 int statusCode = response.getStatusLine().getStatusCode();
                 System.out.println("Response status code: " + statusCode);
                 System.out.println(response.getEntity().toString());
+                HttpEntity responseEntity = response.getEntity();
+                String responseString = EntityUtils.toString(responseEntity);
+                System.out.println("Response body: " + responseString);
+//                System.out.println("Response status code: " + statusCode);
+//                System.out.println(response.getEntity().toString());
             }
         }
     }
